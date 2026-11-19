@@ -58,6 +58,14 @@ pnpm install
 pnpm pack:check     # 逐个包执行 npm pack --dry-run，检查发布内容
 ```
 
+### 新增 / 重命名插件时必须同步的三处
+
+包名出现在三个地方，漏一处就会出现"Host 正常、界面消失"的假故障：
+
+1. `package.json` 的 `name`；
+2. `cordis.patch.yml` 里 `name: '<包名>'`（bundle 的行指向）；
+3. `client.js` 开头的 `window.__ModuleLoader__.load({ id: '<包名>', ... })` —— **浏览器端按这个 id 找模块**，与包名不一致时客户端一半根本不会注册（环境按钮、回收站图标这类 UI 会凭空消失，而 Host 侧工具/提示词仍然工作）。
+
 ## 发布
 
 ```bash
