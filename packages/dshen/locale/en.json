@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "DSHEN",
+    "description": "The DSH Ex Nihilo plugin suite: installs every plugin in this combination at once. Currently bundles the session environment picker (dshen-env-picker), which chooses Python / Node.js / C / C++ / Java / GDB environments per session and injects them into the system prompt."
+  }
+}

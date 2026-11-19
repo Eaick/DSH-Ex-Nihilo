@@ -1,0 +1,7 @@
+# DSHEN — the DSH Ex Nihilo suite.
+# One row per bundled plugin; add a plugin here after adding it to `dependencies`.
+- insert:
+    - id: env-picker
+      name: 'dshen-env-picker'
+    - id: rewind
+      name: 'dshen-rewind'

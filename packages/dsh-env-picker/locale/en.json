@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Session environment picker",
+    "description": "Chooses the Python, Node.js, C/C++ and Java environment for a session and injects that choice into every request's system prompt, with a composer chip, a picker panel, and the /env command.",
+    "detail": "docs/DETAIL.md"
+  }
+}

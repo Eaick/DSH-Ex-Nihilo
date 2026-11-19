@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "会话环境选择器",
+    "description": "为每个会话选择 Python / Node.js / C++ / Java 运行环境，并把「我指定你在 Python 环境：xxx，Node.js 环境：xxx，C/C++ 环境：xxx，Java 环境：xxx」注入每个请求的系统提示词；输入框左侧有环境按钮，上方有选择面板，也可以直接使用 /env 命令。",
+    "detail": "docs/DETAIL.md"
+  }
+}

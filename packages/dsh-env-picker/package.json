@@ -1,0 +1,47 @@
+{
+  "name": "dshen-env-picker",
+  "version": "0.1.0",
+  "description": "Session environment picker for DeepSeek Harness: choose Python / Node.js / C / C++ / Java / GDB environments per session and inject the choice into the system prompt.",
+  "type": "module",
+  "main": "index.js",
+  "license": "MIT",
+  "author": "Eaick",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Eaick/DSH-Ex-Nihilo.git",
+    "directory": "packages/dsh-env-picker"
+  },
+  "homepage": "https://github.com/Eaick/DSH-Ex-Nihilo/tree/main/packages/dsh-env-picker#readme",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24.9.0",
+    "dsh": "^0.2.2-rc.3"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  }
+}

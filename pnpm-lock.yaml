@@ -1,0 +1,22 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  packages/dsh-env-picker: {}
+
+  packages/dsh-rewind: {}
+
+  packages/dshen:
+    dependencies:
+      dshen-env-picker:
+        specifier: workspace:*
+        version: link:../dsh-env-picker
+      dshen-rewind:
+        specifier: workspace:*
+        version: link:../dsh-rewind

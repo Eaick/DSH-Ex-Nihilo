@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "DSHEN",
+    "description": "DSH Ex Nihilo 插件套件：一次装好这套组合里的所有插件。当前包含会话环境选择器（dshen-env-picker）：按会话选择 Python / Node.js / C / C++ / Java / GDB 环境并注入提示词。"
+  }
+}

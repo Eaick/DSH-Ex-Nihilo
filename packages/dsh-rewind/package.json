@@ -1,0 +1,49 @@
+{
+  "name": "dshen-rewind",
+  "version": "1.7.5",
+  "description": "Per-turn file snapshots with /rewind, a per-message restore that forks a new conversation, and a recoverable trash for archived sessions.",
+  "type": "module",
+  "main": "index.js",
+  "license": "MIT",
+  "author": "Eaick",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Eaick/DSH-Ex-Nihilo.git",
+    "directory": "packages/dsh-rewind"
+  },
+  "homepage": "https://github.com/Eaick/DSH-Ex-Nihilo/tree/main/packages/dsh-rewind#readme",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node test/run-tests.mjs && node test/git-tests.mjs && node test/trash-tests.mjs && node test/trash-api-tests.mjs && node test/wiring-tests.mjs"
+  },
+  "engines": {
+    "node": ">=24.9.0",
+    "dsh": "^0.2.2-rc.3"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  }
+}

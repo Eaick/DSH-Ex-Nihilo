@@ -1,0 +1,41 @@
+{
+  "name": "dshen",
+  "version": "0.1.0",
+  "description": "DSHEN — the DSH Ex Nihilo plugin suite: installs and composes the Ex Nihilo bundles.",
+  "type": "module",
+  "main": "index.js",
+  "license": "MIT",
+  "author": "Eaick",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Eaick/DSH-Ex-Nihilo.git",
+    "directory": "packages/dshen"
+  },
+  "homepage": "https://github.com/Eaick/DSH-Ex-Nihilo#readme",
+  "exports": {
+    ".": "./index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24.9.0",
+    "dsh": "^0.2.2-rc.3"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "dshen-env-picker": "workspace:*",
+    "dshen-rewind": "workspace:*"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Rewind and trash",
+    "description": "Per-turn file snapshots restored with /rewind, and a per-message restore that forks a new conversation. Archived sessions land in a recoverable trash page; model tools and commands included. Note: a session that was opened in this process only disappears from the sidebar after an app restart."
+  }
+}
