@@ -26,7 +26,7 @@ DSH 提供两种安装入口，二者等价：
 ```
 dshen                套件（推荐，一次装齐）
 dshen-env-picker     会话环境选择器
-dsh-rewind           回滚与回收站
+dshen-rewind         回滚与回收站
 ```
 
 `install_bundle` 的 target 用 `包名@版本`，例如 `dshen@0.1.0`。

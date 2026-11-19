@@ -25,7 +25,8 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "test": "node test/run-tests.mjs && node test/git-tests.mjs && node test/trash-tests.mjs && node test/trash-api-tests.mjs && node test/wiring-tests.mjs"
