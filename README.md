@@ -27,17 +27,17 @@
 
 ### 方式二：Git 地址（不想下载整仓）
 
-DSH 的安装框也接受 pnpm 的 git 依赖写法。当前提交是 `4b8b2a9d49a4c4f0a074a48cba038fd1dfeae4c3`：
+DSH 的安装框也接受 pnpm 的 git 依赖写法。下面这组 commit 是**实际验证过能装上**的版本（`2ba8810`，含客户端修复）：
 
 ```
-git+https://github.com/Eaick/DSH-Ex-Nihilo.git#4b8b2a9d49a4c4f0a074a48cba038fd1dfeae4c3&path:/packages/dsh-env-picker
-git+https://github.com/Eaick/DSH-Ex-Nihilo.git#4b8b2a9d49a4c4f0a074a48cba038fd1dfeae4c3&path:/packages/dsh-rewind
+git+https://github.com/Eaick/DSH-Ex-Nihilo.git#2ba88103245da9f1f58337529986cccb7727cbc5&path:/packages/dsh-env-picker
+git+https://github.com/Eaick/DSH-Ex-Nihilo.git#2ba88103245da9f1f58337529986cccb7727cbc5&path:/packages/dsh-rewind
 ```
 
 说明两点，免得误会：
 
 - 这串是**写给 DSH/pnpm 的安装 spec**，不是浏览器里能点的下载链接——复制到「插件 → 添加插件」的输入框里用；
-- `#` 后面必须是**完整 40 位 commit**，`path:` 指到包目录。升级时换一个新 commit 重装即可（这种装法不会被 `updateBundle` 自动跟踪）。
+- `#` 后面必须是**完整 40 位 commit**，`path:` 指到包目录；想装更新的代码，就换成仓库当前提交（网页提交页可复制，或本地 `git rev-parse HEAD`）。这种装法钉死 commit，不会被 `updateBundle` 自动跟踪。
 
 ### 方式三：npm（发布后）
 
