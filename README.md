@@ -1,82 +1,70 @@
 # DSH Ex Nihilo
 
-**DSHEN** — a suite of plugins for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
+**DSHEN** — DeepSeek Harness（[DSH](https://github.com/deepseek-ai/deepseek-harness)）的插件合集，从零逐件打造（*ex nihilo*）。
 
-「DSHEN」是一组 DSH 插件，从零开始（*ex nihilo*）逐件打造。仓库按 monorepo 组织，`packages/` 下每个目录是一个可安装的 DSH bundle；`packages/dshen` 是把它们打成一包的套件。
+| 插件 | 做什么 | 装它 |
+|---|---|---|
+| **dshen-env-picker** | 输入框左下多一个环境按钮：按会话选 Python / Node.js / C / C++ / Java / GDB，选择写进提示词 | [说明](packages/dsh-env-picker) |
+| **dshen-rewind** | 每一轮改文件前先留快照（`/rewind`）；归档的会话进回收站，可还原或彻底删除 | [说明](packages/dsh-rewind) |
+| **dshen** | 套件：一次把上面这些装齐（目前仅支持从 npm 安装） | [说明](packages/dshen) |
 
-## 插件
-
-| 包 | 说明 |
-|---|---|
-| [`dshen-env-picker`](packages/dsh-env-picker) | 会话级运行环境选择器：Python / Node.js / C / C++ / Java / GDB，选择写进提示词，支持自动检测、手动增删、按语言开关 |
-| [`dshen-rewind`](packages/dsh-rewind) | 回滚与回收站：逐轮文件快照（`/rewind`）、消息级「恢复代码并分叉」、归档会话可还原回收站（独立页面，按工作区折叠） |
-| `dshen` | 套件 bundle：安装后自动带上并组合上述插件 |
-
-> 后加的插件按同样结构放进 `packages/<name>/`，并在 `packages/dshen` 的 patch 与依赖里登记。
+![环境选择器](packages/dsh-env-picker/docs/panel.png)
 
 ## 安装
 
-DSH 提供两种安装入口，二者等价：
+前提：DSH `0.2.2-rc.3` 及以上。装完**刷新一次页面**。
 
-- **Web GUI → 插件 → 添加插件**，填包名 / 本地目录 / Git 地址；
-- 对 agent 说：`plugin_manager` / `install_bundle`，`target` 填安装 spec。
+### 方式一：本地目录（不需要 npm，推荐）
 
-### 从 npm（发布后）
+1. 下载这个仓库：GitHub 页面右上 **Code → Download ZIP**，或者 `git clone https://github.com/Eaick/DSH-Ex-Nihilo.git`
+2. 解压到任意位置
+3. 打开 DSH：**插件 → 添加插件**，填/选插件目录：
+   - 环境选择器：`<解压目录>\packages\dsh-env-picker`
+   - 回收站/回滚：`<解压目录>\packages\dsh-rewind`
+4. 刷新页面，输入框左下角出现环境按钮、侧边栏出现「回收站」
 
-```
-dshen                套件（推荐，一次装齐）
-dshen-env-picker     会话环境选择器
-dshen-rewind         回滚与回收站
-```
+不想点界面的话，也可以对 agent 说：`install_bundle`，`target` 填这两个目录的绝对路径。
 
-`install_bundle` 的 target 用 `包名@版本`，例如 `dshen@0.1.0`。
+### 方式二：Git 地址（不想下载整仓）
 
-### 直接从 GitHub
-
-Git 安装 spec 必须钉死 commit（这样 `updateBundle` 才能跟踪更新）：
+DSH 的安装框也接受 pnpm 的 git 依赖写法。当前提交是 `4b8b2a9d49a4c4f0a074a48cba038fd1dfeae4c3`：
 
 ```
-git+https://github.com/Eaick/DSH-Ex-Nihilo.git#<40位commit>&path:/packages/dsh-env-picker
-git+https://github.com/Eaick/DSH-Ex-Nihilo.git#<40位commit>&path:/packages/dsh-rewind
+git+https://github.com/Eaick/DSH-Ex-Nihilo.git#4b8b2a9d49a4c4f0a074a48cba038fd1dfeae4c3&path:/packages/dsh-env-picker
+git+https://github.com/Eaick/DSH-Ex-Nihilo.git#4b8b2a9d49a4c4f0a074a48cba038fd1dfeae4c3&path:/packages/dsh-rewind
 ```
 
-套件（`packages/dshen`）依赖的是 npm 版本：它从 GitHub 安装时，依赖仍需从 registry 解析；未发布前请直接装单个插件。
+说明两点，免得误会：
 
-### 本地目录
+- 这串是**写给 DSH/pnpm 的安装 spec**，不是浏览器里能点的下载链接——复制到「插件 → 添加插件」的输入框里用；
+- `#` 后面必须是**完整 40 位 commit**，`path:` 指到包目录。升级时换一个新 commit 重装即可（这种装法不会被 `updateBundle` 自动跟踪）。
 
-把 `packages/<name>` 的绝对路径作为 target 即可（开发时的首选方式）。
+### 方式三：npm（发布后）
 
-## 开发
+npm 上发布后，装包名就行：
 
-```bash
-pnpm install
-```
+| 包名 | 说明 |
+|---|---|
+| `dshen` | 套件，一次装齐 |
+| `dshen-env-picker` | 只要环境选择器 |
+| `dshen-rewind` | 只要回滚 + 回收站 |
 
-在本机验证：**插件 → 添加插件 → 选择本地目录** `packages/dsh-env-picker`（或对 agent 说 `plugin_manager install_bundle`，target 填这个绝对路径）。改动后重新安装该 bundle 即可让 Host/Client 加载新代码。
+在「插件 → 添加插件」填 `dshen`（或 `dshen-env-picker@0.1.0`）。
 
-```bash
-pnpm pack:check     # 逐个包执行 npm pack --dry-run，检查发布内容
-```
+> 套件 `dshen` 的依赖走 registry，因此**只能从 npm 装**，不能用方式二的 Git 地址装；未发布前请按方式一/二单独装两个插件。
 
-### 新增 / 重命名插件时必须同步的三处
+## 兼容性
 
-包名出现在三个地方，漏一处就会出现"Host 正常、界面消失"的假故障：
-
-1. `package.json` 的 `name`；
-2. `cordis.patch.yml` 里 `name: '<包名>'`（bundle 的行指向）；
-3. `client.js` 开头的 `window.__ModuleLoader__.load({ id: '<包名>', ... })` —— **浏览器端按这个 id 找模块**，与包名不一致时客户端一半根本不会注册（环境按钮、回收站图标这类 UI 会凭空消失，而 Host 侧工具/提示词仍然工作）。
-
-## 发布
-
-```bash
-npm login
-pnpm -r publish --access public --no-git-checks
-```
-
-- 先发插件包，再发 `dshen`：`workspace:*` 依赖在发布时会被替换成实际版本号。
-- 版本语义：插件独立发版；套件版本跟随整套组合。
-- 每个包都要带 `engines.dsh`，与目标 DSH 版本对齐（当前 `^0.2.2-rc.3`），这样版本不匹配时安装会被直接拒绝，而不是装上崩溃。
+- DSH：每个包声明 `engines.dsh = ^0.2.2-rc.3`，版本不匹配时安装会被直接拒绝，而不是装上后崩溃。
+- 平台：Web 客户端（`platform: web`）。
+- 不需要构建步骤：`client.js` 就是浏览器可直接加载的模块。
 
 ## 许可
 
-[MIT](LICENSE)
+[MIT](LICENSE)。插件基于 DSH 的公开插件 API 实现，与 DeepSeek 官方无隶属关系。
+
+---
+
+### 给维护者
+
+开发、测试、发布、改名的注意事项都写在 [CONTRIBUTING.md](CONTRIBUTING.md)，根 README 只面向安装者。

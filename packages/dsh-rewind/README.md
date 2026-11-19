@@ -1,9 +1,17 @@
-# dsh-rewind（回滚与回收站）
+# dshen-rewind（回滚与回收站）
 
 逐轮文件快照（`/rewind`）＋ 会话可还原回收站。两组能力共用一个存储根目录。
 
 - **回滚（rewind）**：文件工具每次改动**之前**先记录内容，每轮落一个 checkpoint，需要时原样写回。对话部分用**分叉**实现——在目标轮边界新建会话，原会话从不被改写。
 - **回收站（trash）**：归档的会话直接出现在回收站页面，可还原或彻底删除；`/trash <id>` 还能把某个会话的日志与快照整体移入回收站副本，再搬回来。
+
+## 安装
+
+在「插件 → 添加插件」里选：npm 发布后填 `dshen-rewind`；现在可填本地目录 `packages/dsh-rewind`，或 Git 地址 `git+https://…/DSH-Ex-Nihilo.git#<40位commit>&path:/packages/dsh-rewind`（详见[根 README](https://github.com/Eaick/DSH-Ex-Nihilo#安装)）。
+
+装完刷新页面：侧边栏 Plugins / Schedules 旁多一个「回收站」入口，助手消息的工具调用下方出现回滚菜单。
+
+> 下面的「回收站页面」和末尾的实现说明偏技术，属于维护笔记；只想用的话看到「模型工具」一节就够了。
 
 ## 命令
 

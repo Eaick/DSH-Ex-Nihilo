@@ -15,9 +15,13 @@
 
 ## 安装
 
-在 Web GUI 里：**插件 → 添加插件**，填 `dshen-env-picker`（或 `dshen-env-picker@0.1.0`，以及本地目录 / Git spec）。
+三种方式（详见[仓库 README](https://github.com/Eaick/DSH-Ex-Nihilo#安装)）：
 
-也可以对 agent 说：`plugin_manager` / `install_bundle`，target 填 `dshen-env-picker@0.1.0`。
+- **npm**（发布后）：在「插件 → 添加插件」填 `dshen-env-picker`；
+- **本地目录**：下载仓库后，选 `packages/dsh-env-picker` 这个目录；
+- **Git 地址**：填 `git+https://…/DSH-Ex-Nihilo.git#<40位commit>&path:/packages/dsh-env-picker`。
+
+装完刷新页面，输入框左下角会出现环境按钮。
 
 ## 使用
 
