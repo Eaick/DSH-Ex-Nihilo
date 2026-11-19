@@ -1,10 +1,6 @@
-# NIHILO
+# DSH Ex Nihilo
 
-> *ex nihilo* —— 无中生有。
-
-DeepSeek Harness（[DSH](https://github.com/deepseek-ai/deepseek-harness)）的插件合集。从零写起，一次只做一件事：多一个按钮、多一条命令、多一次后悔药。
-
-套件名 **DSHEN**（DSH + *ex nihilo*），插件包统一 `dshen-` 前缀。
+**DSHEN** — DeepSeek Harness（[DSH](https://github.com/deepseek-ai/deepseek-harness)）的插件合集，从零逐件打造（*ex nihilo*）。
 
 | 插件 | 做什么 | 说明 |
 |---|---|---|
