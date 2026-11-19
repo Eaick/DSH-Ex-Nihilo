@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: 'dsh-rewind',
+  id: 'dshen-rewind',
   factory(require) {
     const React = require('react');
     const h = React.createElement;

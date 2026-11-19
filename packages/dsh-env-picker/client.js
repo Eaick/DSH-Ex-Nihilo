@@ -7,7 +7,7 @@
  * the durable log record, and the pushed `envPicker` projection both halves read.
  */
 window.__ModuleLoader__.load({
-  id: '@local/dsh-env-picker',
+  id: 'dshen-env-picker',
   factory(require) {
     const React = require('react')
     const h = React.createElement
