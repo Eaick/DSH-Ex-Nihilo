@@ -8,8 +8,6 @@
 | **dshen-rewind** | 每一轮改文件前先留快照（`/rewind`）；归档的会话进回收站，可还原或彻底删除 | [说明](packages/dsh-rewind) |
 | **dshen** | 套件：把上面这些打成一包（需先在仓库里 `pnpm install`，未对外发布） | [说明](packages/dshen) |
 
-![环境选择器](packages/dsh-env-picker/docs/panel.png)
-
 ## 安装
 
 目前没有发布到任何包管理器，只能**下载仓库后从本地目录装**。前提：DSH `0.2.2-rc.3` 及以上。
