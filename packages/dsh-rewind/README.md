@@ -7,7 +7,7 @@
 
 ## 安装
 
-在「插件 → 添加插件」里选：npm 发布后填 `dshen-rewind`；现在可填本地目录 `packages/dsh-rewind`，或 Git 地址 `git+https://…/DSH-Ex-Nihilo.git#<40位commit>&path:/packages/dsh-rewind`（详见[根 README](https://github.com/Eaick/DSH-Ex-Nihilo#安装)）。
+目前只能从本地目录装：下载或克隆仓库，在「插件 → 添加插件」里填 `packages/dsh-rewind` 的绝对路径（详见[根 README](https://github.com/Eaick/DSH-Ex-Nihilo#安装)）。
 
 装完刷新页面：侧边栏 Plugins / Schedules 旁多一个「回收站」入口，助手消息的工具调用下方出现回滚菜单。
 

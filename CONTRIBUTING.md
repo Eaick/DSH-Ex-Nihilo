@@ -9,7 +9,7 @@
 ├─ packages/
 │  ├─ dsh-env-picker/     包名 dshen-env-picker
 │  ├─ dsh-rewind/         包名 dshen-rewind
-│  └─ dshen/              套件包（只聚合上面两个）
+│  └─ dshen/              套件包（暂时只能本地开发用）
 ├─ pnpm-workspace.yaml
 └─ package.json           私有根，只放脚本
 ```
@@ -36,26 +36,14 @@ pnpm install
 node packages/dsh-env-picker/test/smoke.mjs
 
 # 回滚 + 回收站（105 个用例）
-cd packages/dsh-rewind && npm test
+cd packages/dsh-rewind && node test/run-tests.mjs
 ```
 
-发布前再跑一次打包检查：
+打包检查（确认每个包里该有的文件都在）：
 
 ```bash
 pnpm pack:check        # 对每个包执行 npm pack --dry-run
 ```
-
-## 发布到 npm
-
-```bash
-npm login
-pnpm -r publish --access public --no-git-checks
-```
-
-- **先插件、后套件**：`dshen` 用 `workspace:*` 依赖，pnpm 在发布时会把它替换成实际版本号；顺序反了会发出版本解析不到的套件。
-- 插件独立发版，套件版本跟整套组合走。
-- 每个包都必须有 `engines.dsh`，它的作用是把"版本不匹配"挡在安装阶段。
-- 包的 `files` 里要包含 `LICENSE`；`README.md` 会被 npm 页面自动读取。
 
 ## 改包名时同步三处
 
@@ -67,25 +55,12 @@ pnpm -r publish --access public --no-git-checks
 
 改完后重新安装并刷新页面验证：`conversation.input.left` 里应能看到 `env-picker-trigger`，`sidebar.panellist` 里应能看到 `dsh-rewind-trash`。
 
-## Git 安装 spec
-
-DSH 的安装目标除了包名和本地目录，还接受 pnpm 的 git 依赖写法：
-
-```
-git+https://<host>/<owner>/<repo>.git#<40位commit>&path:/packages/<目录>
-```
-
-- commit 必须完整 40 位；短 sha、分支名、tag 都不行；
-- `path:` 指到**包含 package.json 的目录**；
-- 公开仓库不需要凭据；私有仓库走本机 git 凭据；
-- 这种装法钉死 commit，`updateBundle` 不会跟踪，升级 = 换 commit 重装。
-
 ## 文档分工
 
 | 文件 | 读者 | 写什么 |
 |---|---|---|
 | 根 `README.md` | 安装者 | 这是什么、怎么装、装完看到什么 |
 | `packages/*/README.md` | 安装者 | 单个插件的功能、用法、限制 |
-| `CONTRIBUTING.md` | 维护者 | 开发、测试、发布、命名规则 |
+| `CONTRIBUTING.md` | 维护者 | 开发、测试、命名规则 |
 
 发布物里不要出现：真机窗口截图、本机绝对路径、个人邮箱。截图只放组件渲染图或通用示例路径（`C:\Python311`、`C:\mingw64` 这类）。
