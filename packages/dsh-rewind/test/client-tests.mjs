@@ -8,12 +8,13 @@
  */
 
 import assert from 'node:assert/strict'
-import { promises as fsp } from 'node:fs'
+import { promises as fsp, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const source = await fsp.readFile(path.join(here, '..', 'client.js'), 'utf8')
+const packageName = JSON.parse(readFileSync(path.join(here, '..', 'package.json'), 'utf8')).name
 
 let passed = 0
 const failures = []
@@ -67,7 +68,7 @@ function loadClient(reactValues = []) {
   const evaluate = new Function('window', 'document', 'atob', source)
   evaluate(windowStub, documentStub, (value) => Buffer.from(value, 'base64').toString('binary'))
   assert.ok(captured !== undefined, 'the module must call window.__ModuleLoader__.load')
-  assert.equal(captured.id, 'dsh-rewind')
+  assert.equal(captured.id, packageName, 'the client factory id must equal the package name')
   const react = makeReact(reactValues)
   const requireStub = (name) => {
     if (name === 'react') return react
