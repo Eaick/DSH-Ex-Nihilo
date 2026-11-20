@@ -835,8 +835,12 @@ window.__ModuleLoader__.load({
 
       if (checkpoints.length === 0 && error === '') return null;
 
-      const turnLabel = (turn) => t('turnFormat').replace('{n}', String(turn));
-      const filesLabel = (files) => t('filesFormat').replace('{n}', String(files));
+      const pattern = (key, fallback) => {
+        const value = t(key);
+        return typeof value === 'string' && value !== '' ? value : fallback;
+      };
+      const turnLabel = (turn) => pattern('turnFormat', '{n}').replace('{n}', String(turn));
+      const filesLabel = (files) => pattern('filesFormat', '{n}').replace('{n}', String(files));
       const latest = checkpoints.length === 0 ? undefined : checkpoints[0];
 
       const run = async (turn, mode) => {
