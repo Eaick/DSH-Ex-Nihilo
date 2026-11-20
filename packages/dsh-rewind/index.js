@@ -307,6 +307,82 @@ export function apply(ctx, config) {
     return diffPlan({ fs: ctx.fs, store, sessionId, files })
   }
 
+  /**
+   * Restore files and/or branch at one turn boundary.
+   *
+   * Both rewind entry points share this: the per-message menu (which starts from
+   * a finalized assistant message) and the session-level panel (which starts
+   * from a turn number, so an aborted turn is still reachable).
+   */
+  const performRewind = async (sessionId, turn, startSeq, mode) => {
+    const wantsFiles = mode === 'code' || mode === 'fork-code'
+    const wantsFork = mode === 'fork' || mode === 'fork-code'
+    const parts = []
+    let childId
+    if (wantsFork) {
+      // Fork through the Host controller: it owns persistence, the session
+      // catalog, and the cold-readable boundary semantics, and its failures
+      // surface here instead of disappearing inside the client.
+      const controller = ctx.get('sessionController')
+      if (controller === undefined || typeof controller.fork !== 'function') {
+        return { ok: false, error: '宿主没有暴露 sessionController.fork，无法新建会话' }
+      }
+      try {
+        const forked = await controller.fork({ sessionId, atSeq: startSeq - 1 })
+        childId = typeof forked?.sessionId === 'string' && forked.sessionId !== '' ? forked.sessionId : undefined
+      } catch (error) {
+        return { ok: false, error: `分叉失败：${describeError(error)}` }
+      }
+      if (childId === undefined) return { ok: false, error: '分叉失败：宿主没有返回新会话 id' }
+      let title
+      try {
+        title = await forkTitle(sessionId)
+        await controller.rename({ sessionId: childId, title })
+      } catch (error) {
+        // A branch with the parent's title is still usable.
+        warn(`rewind: fork title failed: ${describeError(error)}`)
+        title = undefined
+      }
+      parts.push(title === undefined
+        ? `已新建会话 ${childId}（停在同一步）。`
+        : `已新建会话「${title}」（停在同一步）。`)
+    }
+    if (wantsFiles) {
+      const outcome = await restoreTo(sessionId, turn)
+      parts.push(formatRestore(outcome.report, outcome))
+    }
+    if (!wantsFork && !wantsFiles) parts.push('没有可执行的动作。')
+    return { ok: true, text: parts.join('\n\n'), fork: wantsFork, childId }
+  }
+
+  /**
+   * Per-turn checkpoints of one Session, newest first. `aborted` comes from the
+   * log's own `turn/end` reasons, so an interrupted turn is labelled instead of
+   * looking like a finished one.
+   */
+  const checkpointEntries = async (session) => {
+    const state = await store.load(session.id)
+    const aborted = new Set()
+    try {
+      for (const event of session.ownEvents()) {
+        if (event?.type === 'turn/end' && event?.data?.reason?.kind === 'aborted') aborted.add(event.data.turn)
+      }
+    } catch {
+      /* a Session whose events cannot be read simply loses the badge */
+    }
+    return (Array.isArray(state.checkpoints) ? state.checkpoints : [])
+      .slice()
+      .sort((left, right) => right.turn - left.turn)
+      .map((record) => ({
+        turn: record.turn,
+        at: typeof record.at === 'string' ? record.at : '',
+        files: Array.isArray(record.files) ? record.files.length : 0,
+        open: record.open === true,
+        aborted: aborted.has(record.turn),
+        git: record.git !== undefined,
+      }))
+  }
+
   const lastTurn = (checkpoints) => checkpoints.reduce((max, checkpoint) => Math.max(max, checkpoint.turn), 0)
 
   const run = async (sessionId, argument, mode) => {
@@ -1024,49 +1100,76 @@ export function apply(ctx, config) {
         const session = ctx.agents.get(invocation.agent.id)?.session
         const located = locateTurn(session, messageId)
         if (located === undefined) return { kind: 'error', text: '找不到该消息所属的回合' }
-        const wantsFiles = mode === 'code' || mode === 'fork-code'
-        const wantsFork = mode === 'fork' || mode === 'fork-code'
-        const parts = []
-        let childId
-        if (wantsFork) {
-          // Fork through the Host controller: it owns persistence, the session
-          // catalog, and the cold-readable boundary semantics, and its failures
-          // surface here instead of disappearing inside the client.
-          const controller = ctx.get('sessionController')
-          if (controller === undefined || typeof controller.fork !== 'function') {
-            return { kind: 'error', text: '宿主没有暴露 sessionController.fork，无法新建会话' }
-          }
-          try {
-            const forked = await controller.fork({ sessionId: invocation.agent.id, atSeq: located.startSeq - 1 })
-            childId = typeof forked?.sessionId === 'string' && forked.sessionId !== '' ? forked.sessionId : undefined
-          } catch (error) {
-            return { kind: 'error', text: `分叉失败：${describeError(error)}` }
-          }
-          if (childId === undefined) return { kind: 'error', text: '分叉失败：宿主没有返回新会话 id' }
-          let title
-          try {
-            title = await forkTitle(invocation.agent.id)
-            await controller.rename({ sessionId: childId, title })
-          } catch (error) {
-            // A branch with the parent's title is still usable.
-            warn(`rewind: fork title failed: ${describeError(error)}`)
-            title = undefined
-          }
-          parts.push(title === undefined
-            ? `已新建会话 ${childId}（停在同一步）。`
-            : `已新建会话「${title}」（停在同一步）。`)
-        }
-        if (wantsFiles) {
-          const outcome = await restoreTo(invocation.agent.id, located.turn)
-          parts.push(formatRestore(outcome.report, outcome))
-        }
-        if (!wantsFork && !wantsFiles) parts.push('没有可执行的动作。')
+        const outcome = await performRewind(invocation.agent.id, located.turn, located.startSeq, mode)
+        if (!outcome.ok) return { kind: 'error', text: outcome.error }
         const prompt = promptOfSession(session, located.turn)
-        const payload = { turn: located.turn, startSeq: located.startSeq, prompt, fork: wantsFork, childId }
-        const text = `${parts.join('\n\n')}\n\n<!--rewind:data:${Buffer.from(JSON.stringify(payload), 'utf8').toString('base64')}-->`
+        const payload = { turn: located.turn, startSeq: located.startSeq, prompt, fork: outcome.fork, childId: outcome.childId }
+        const text = `${outcome.text}\n\n<!--rewind:data:${Buffer.from(JSON.stringify(payload), 'utf8').toString('base64')}-->`
         return { kind: 'success', text }
       } catch (error) {
         return { kind: 'error', text: `rewind-message 失败：${describeError(error)}` }
+      }
+    },
+  })
+
+  command({
+    name: 'rewind-list',
+    description: '列出当前会话的逐轮文件快照（供输入框上方的回退面板使用）',
+    input: { hint: '' },
+    handler: async (invocation) => {
+      try {
+        const session = ctx.agents.get(invocation.agent.id)?.session
+        if (session === undefined) return { kind: 'error', text: '当前会话未在当前进程中加载' }
+        const checkpoints = await checkpointEntries(session)
+        const payload = { checkpoints }
+        const summary = checkpoints.length === 0 ? '还没有任何文件快照。' : `${checkpoints.length} 个快照`
+        return {
+          kind: 'success',
+          text: `${summary}\n\n<!--rewind:data:${Buffer.from(JSON.stringify(payload), 'utf8').toString('base64')}-->`,
+        }
+      } catch (error) {
+        return { kind: 'error', text: `rewind-list 失败：${describeError(error)}` }
+      }
+    },
+  })
+
+  command({
+    name: 'rewind-turn',
+    description: '按轮次回滚文件并可选分叉（不依赖 assistant 消息，中止的轮次也能回退）',
+    input: { hint: '<turn> <code|fork-code>' },
+    handler: async (invocation) => {
+      try {
+        const argument = readArgument(invocation.rawInput)
+        const [rawTurn, mode = 'code'] = argument.split(/\s+/)
+        const turn = Number.parseInt(rawTurn ?? '', 10)
+        if (!Number.isInteger(turn) || turn < 0) {
+          return { kind: 'error', text: '需要一个轮次号，例如 /rewind-turn 25 code' }
+        }
+        if (mode !== 'code' && mode !== 'fork' && mode !== 'fork-code') {
+          return { kind: 'error', text: `未知模式 \`${mode}\`（code | fork | fork-code）` }
+        }
+        const session = ctx.agents.get(invocation.agent.id)?.session
+        if (session === undefined) return { kind: 'error', text: '当前会话未在当前进程中加载' }
+        let startSeq
+        try {
+          for (const event of session.ownEvents()) {
+            if (event?.type === 'turn/start' && event?.data?.turn === turn) {
+              startSeq = event.seq
+              break
+            }
+          }
+        } catch {
+          startSeq = undefined
+        }
+        if (startSeq === undefined) return { kind: 'error', text: `找不到第 ${turn} 轮的起点` }
+        const outcome = await performRewind(invocation.agent.id, turn, startSeq, mode)
+        if (!outcome.ok) return { kind: 'error', text: outcome.error }
+        const prompt = promptOfSession(session, turn)
+        const payload = { turn, startSeq, prompt, fork: outcome.fork, childId: outcome.childId }
+        const text = `${outcome.text}\n\n<!--rewind:data:${Buffer.from(JSON.stringify(payload), 'utf8').toString('base64')}-->`
+        return { kind: 'success', text }
+      } catch (error) {
+        return { kind: 'error', text: `rewind-turn 失败：${describeError(error)}` }
       }
     },
   })

@@ -142,7 +142,7 @@ await test('apply: provides the rewind and trash services with the documented op
 await test('apply: every trash command and both model tools are registered', () => {
   const { wired } = setup()
   assert.deepEqual(wired.commands.map((definition) => definition.name).sort(), [
-    'rewind', 'rewind-message', 'trash', 'trash-list', 'trash-prune', 'trash-purge', 'trash-restore',
+    'rewind', 'rewind-list', 'rewind-message', 'rewind-turn', 'trash', 'trash-list', 'trash-prune', 'trash-purge', 'trash-restore',
   ])
   assert.deepEqual(wired.tools.map((definition) => definition.name).sort(), ['rewind', 'trash'])
   const trashTool = wired.tools.find((definition) => definition.name === 'trash')
@@ -369,6 +369,82 @@ await test('rewind-message: code mode never asks for a fork', async () => {
   const payload = JSON.parse(Buffer.from(match[1], 'base64').toString('utf8'))
   assert.equal(payload.fork, false)
   assert.equal(payload.startSeq, 3)
+})
+
+await test('rewind-list: newest first, and an aborted turn is labelled', async () => {
+  const target = 'session-list-1'
+  const sessionId = target
+  const agent = {
+    id: target,
+    session: {
+      id: target,
+      ownEvents: () => [
+        { type: 'turn/start', seq: 10, data: { turn: 5 } },
+        { type: 'turn/end', seq: 20, data: { turn: 5, reason: { kind: 'aborted', reason: { kind: 'user' } } } },
+        { type: 'turn/start', seq: 21, data: { turn: 6 } },
+        { type: 'turn/end', seq: 30, data: { turn: 6, reason: { kind: 'completed' } } },
+      ],
+    },
+  }
+  const { ctx, wired } = fakeContext({ agentsById: { [target]: agent } })
+  const dir = path.join(home, 'rewind', 'sessions', sessionId)
+  await fsp.mkdir(dir, { recursive: true })
+  await fsp.writeFile(path.join(dir, 'checkpoints.json'), JSON.stringify({
+    version: 1,
+    sessionId,
+    checkpoints: [
+      { turn: 5, at: '2026-01-01T00:00:00.000Z', open: false, files: [{ path: 'a', display: 'a', before: { kind: 'text', sha: 'x', bytes: 1 } }] },
+      { turn: 6, at: '2026-01-01T00:05:00.000Z', open: false, files: [] },
+    ],
+  }), 'utf8')
+  apply(ctx, {})
+  const command = wired.commands.find((definition) => definition.name === 'rewind-list')
+  const result = await command.handler({ agent, rawInput: '/rewind-list' })
+  assert.equal(result.kind, 'success', result.text)
+  const match = /<!--rewind:data:([A-Za-z0-9+/=]+)-->/.exec(result.text)
+  assert.ok(match !== null)
+  const payload = JSON.parse(Buffer.from(match[1], 'base64').toString('utf8'))
+  assert.deepEqual(payload.checkpoints.map((entry) => entry.turn), [6, 5])
+  assert.equal(payload.checkpoints[0].aborted, false)
+  assert.equal(payload.checkpoints[1].aborted, true)
+  assert.equal(payload.checkpoints[1].files, 1)
+  await fsp.rm(path.join(home, 'rewind', 'sessions'), { recursive: true, force: true })
+})
+
+await test('rewind-turn: a turn number is enough, no message id required', async () => {
+  const target = 'session-turn-1'
+  const agent = {
+    id: target,
+    session: {
+      id: target,
+      ownEvents: () => [
+        { type: 'turn/start', seq: 7, data: { turn: 3 } },
+        { type: 'assistant/message', seq: 8, data: { message: { id: 'msg-1' } } },
+      ],
+    },
+  }
+  const { ctx, wired } = fakeContext({ agentsById: { [target]: agent } })
+  apply(ctx, {})
+  const command = wired.commands.find((definition) => definition.name === 'rewind-turn')
+  const result = await command.handler({ agent, rawInput: '/rewind-turn 3 code' })
+  assert.equal(result.kind, 'success', result.text)
+  const match = /<!--rewind:data:([A-Za-z0-9+/=]+)-->/.exec(result.text)
+  assert.ok(match !== null)
+  const payload = JSON.parse(Buffer.from(match[1], 'base64').toString('utf8'))
+  assert.equal(payload.turn, 3)
+  assert.equal(payload.startSeq, 7)
+  assert.equal(payload.fork, false)
+})
+
+await test('rewind-turn: a turn the log does not contain is refused', async () => {
+  const target = 'session-turn-2'
+  const agent = { id: target, session: { id: target, ownEvents: () => [{ type: 'turn/start', seq: 1, data: { turn: 1 } }] } }
+  const { ctx, wired } = fakeContext({ agentsById: { [target]: agent } })
+  apply(ctx, {})
+  const command = wired.commands.find((definition) => definition.name === 'rewind-turn')
+  const result = await command.handler({ agent, rawInput: '/rewind-turn 9 code' })
+  assert.equal(result.kind, 'error')
+  assert.match(result.text, /找不到第 9 轮/)
 })
 
 await test('ghosts: an accounted Session without a log is found and pruned', async () => {

@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: 'dshen-rewind',
+  id: 'dsh-rewind',
   factory(require) {
     const React = require('react');
     const h = React.createElement;
@@ -10,6 +10,11 @@ window.__ModuleLoader__.load({
       title: '回滚到这一轮之前',
       captionA: '文件回到这一轮之前',
       captionB: '「恢复代码并分叉」会新建一个会话并打开',
+      panelTitle: '回退',
+      abortedBadge: '已中止',
+      turnFormat: '第 {n} 轮',
+      filesFormat: '{n} 个文件',
+      noticeRewound: '已回退',
       code: '恢复代码',
       forkCode: '恢复代码并分叉',
       forkHint: '新建会话',
@@ -58,6 +63,11 @@ window.__ModuleLoader__.load({
       title: 'Rewind to before this turn',
       captionA: 'Files return to this turn',
       captionB: '“Restore code and fork” opens a new conversation',
+      panelTitle: 'Rewind',
+      abortedBadge: 'stopped',
+      turnFormat: 'Turn {n}',
+      filesFormat: '{n} files',
+      noticeRewound: 'Rewound',
       code: 'Restore code',
       forkCode: 'Restore code and fork',
       forkHint: 'new chat',
@@ -424,6 +434,8 @@ window.__ModuleLoader__.load({
         margin-left: auto; font-size: 11px; line-height: 16px;
         color: var(--dsw-alias-label-tertiary, var(--dsw-alias-label-secondary));
       }
+      .dsh-rewind-dock-toggle { transition: opacity .12s ease; }
+      .dsh-rewind-dock-toggle:hover { opacity: .7; }
       .dsh-rewind-caret { font-size: 11px; line-height: 16px; color: var(--dsw-alias-state-error-primary); }
     `;
 
@@ -768,6 +780,135 @@ window.__ModuleLoader__.load({
     }
 
     // ---------------------------------------------------------------------
+    // Rewind: the session-level panel above the composer.
+    // ---------------------------------------------------------------------
+
+    const dockStyle = {
+      display: 'flex', flexDirection: 'column', width: '100%', marginBottom: '8px',
+      border: `1px solid ${BORDER}`, borderRadius: '10px', background: LAYER_1, overflow: 'hidden',
+    };
+    const dockHeadStyle = { display: 'flex', alignItems: 'center', gap: '8px', minHeight: '34px', padding: '0 10px 0 6px' };
+    const dockToggleStyle = {
+      display: 'inline-flex', alignItems: 'center', gap: '6px', height: '34px', padding: '0 4px',
+      border: 'none', background: 'transparent', color: LABEL, font: 'inherit', fontSize: '12px',
+      fontWeight: '500', cursor: 'pointer', whiteSpace: 'nowrap',
+    };
+    const dockMetaStyle = {
+      fontSize: '12px', lineHeight: '18px', color: LABEL_3,
+      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+    };
+    const dockRowStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderTop: `1px solid ${BORDER}` };
+    const dockListStyle = { maxHeight: '220px', overflowY: 'auto' };
+
+    /**
+     * Session-level rewind entry.
+     *
+     * The per-message menu only exists on a finalized assistant message, so a turn
+     * the user stopped had no way back: an interrupted turn often has no final
+     * assistant message at all. This panel lists the Session's own checkpoints —
+     * newest first, aborted turns labelled — and restores or branches from a turn
+     * number alone.
+     */
+    function RewindDock(props) {
+      const t = typeof props.i18n === 'function' ? props.i18n : (key) => key;
+      const sessionId = props.sessionId;
+      const list = typeof props.rewindList === 'function' ? props.rewindList : async () => [];
+      const act = typeof props.rewindTurn === 'function' ? props.rewindTurn : async () => ({ error: 'rewind: host action unavailable' });
+      const [open, setOpen] = React.useState(false);
+      const [checkpoints, setCheckpoints] = React.useState([]);
+      const [error, setError] = React.useState('');
+      const [notice, setNotice] = React.useState('');
+      const [busy, setBusy] = React.useState('');
+
+      const load = React.useCallback(async () => {
+        if (typeof sessionId !== 'string' || sessionId === '') return;
+        try {
+          const items = await list(sessionId);
+          setCheckpoints(Array.isArray(items) ? items : []);
+          setError('');
+        } catch (failure) {
+          setError(messageOf(failure));
+        }
+      }, [list, sessionId]);
+
+      React.useEffect(() => { void load(); }, [load]);
+
+      if (checkpoints.length === 0 && error === '') return null;
+
+      const turnLabel = (turn) => t('turnFormat').replace('{n}', String(turn));
+      const filesLabel = (files) => t('filesFormat').replace('{n}', String(files));
+      const latest = checkpoints.length === 0 ? undefined : checkpoints[0];
+
+      const run = async (turn, mode) => {
+        if (busy !== '') return;
+        setBusy(`${turn}:${mode}`);
+        setError('');
+        setNotice('');
+        try {
+          const outcome = await act(sessionId, turn, mode);
+          if (outcome !== undefined && outcome.error !== undefined) setError(outcome.error);
+          else setNotice(t('noticeRewound'));
+          await load();
+        } catch (failure) {
+          setError(messageOf(failure));
+        } finally {
+          setBusy('');
+        }
+      };
+
+      const row = (item) => h('div', { key: item.turn, style: dockRowStyle },
+        h('span', { style: { minWidth: '58px', fontWeight: '500', whiteSpace: 'nowrap' } }, turnLabel(item.turn)),
+        item.aborted === true
+          ? h('span', { style: { ...badgeStyle, color: 'var(--dsw-alias-state-warn-primary)' } }, t('abortedBadge'))
+          : item.open === true
+            ? h('span', { style: { ...badgeStyle, color: 'var(--dsw-alias-state-warn-primary)' } }, t('runningBadge'))
+            : null,
+        h('span', { style: { ...dockMetaStyle, flex: '0 1 auto' } },
+          [formatTime(item.at), filesLabel(item.files)].filter((part) => part !== '').join(' · ')),
+        h('span', { style: { flex: '1 1 auto' } }),
+        h('button', {
+          type: 'button',
+          className: 'dsh-rewind-primary-btn',
+          style: primaryButtonStyle,
+          disabled: busy !== '',
+          onClick: () => { void run(item.turn, 'code'); },
+        }, t('code')),
+        h('button', {
+          type: 'button',
+          className: 'dsh-rewind-trash-btn',
+          style: quietButtonStyle,
+          disabled: busy !== '',
+          onClick: () => { void run(item.turn, 'fork-code'); },
+        }, t('forkCode')));
+
+      const summary = latest === undefined
+        ? ''
+        : `${turnLabel(latest.turn)} · ${filesLabel(latest.files)}${latest.aborted === true ? ` · ${t('abortedBadge')}` : ''}`;
+
+      return h('div', { style: dockStyle },
+        h('div', { style: dockHeadStyle },
+          h('button', {
+            type: 'button',
+            className: 'dsh-rewind-dock-toggle',
+            style: dockToggleStyle,
+            'aria-expanded': open ? 'true' : 'false',
+            title: t('panelTitle'),
+            onClick: () => {
+              setOpen((value) => !value);
+              void load();
+            },
+          },
+          h('span', { className: 'dsh-rewind-chevron', 'data-open': open ? 'true' : 'false' }, chevron),
+          h('span', { className: 'dsh-rewind-menu-glyph' }, ICON),
+          h('span', null, t('panelTitle')),
+          summary === '' ? null : h('span', { style: dockMetaStyle }, summary)),
+          h('span', { style: { flex: '1 1 auto' } }),
+          error === '' ? null : h('span', { className: 'dsh-rewind-caret', style: { maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: error }, error),
+          notice === '' ? null : h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-state-success-primary)' } }, notice)),
+        open ? h('div', { className: 'dsh-rewind-trash-scroll', style: dockListStyle }, checkpoints.map(row)) : null);
+    }
+
+    // ---------------------------------------------------------------------
     // Rewind: the per-message menu in the conversation.
     // ---------------------------------------------------------------------
 
@@ -923,9 +1064,8 @@ window.__ModuleLoader__.load({
           return false;
         };
 
-        const rewind = async (sessionId, messageId, mode) => {
-          if (typeof messageId !== 'string' || messageId === '') return { error: t('failed') };
-          const line = `/rewind-message ${messageId} ${mode}`;
+        /** Run one hidden host command and return its parsed data marker. */
+        const runHostCommand = async (sessionId, line) => {
           const result = await ctx.remote.commands.execute(sessionId, line, []);
           if (result === undefined || result.ok !== true) {
             const failure = result && result.error ? result.error : undefined;
@@ -937,12 +1077,16 @@ window.__ModuleLoader__.load({
             return { error: typeof command.text === 'string' ? command.text.split('\n')[0] : t('failed') };
           }
           const parsed = extractData(command && typeof command.text === 'string' ? command.text : '');
-          if (parsed.data === undefined) return undefined;
-          // Fork modes branch the Session at the turn boundary, then OPEN the
-          // branch as the new conversation. The Host creates the fork, so the
-          // payload already carries the child id; the client-side fork is only a
-          // fallback for a Host build without the controller.
-          if (parsed.data.fork !== true) return undefined;
+          return { data: parsed.data };
+        };
+
+        /**
+         * Open the branch a Host fork created and refill its composer. The Host
+         * owns the fork (persistence + catalog), so the payload already carries
+         * the child id; the client-side fork is only a fallback for a Host build
+         * without the controller.
+         */
+        const openBranch = async (sessionId, data) => {
           let opened = false;
           const openChild = (id) => {
             if (opened) return;
@@ -953,28 +1097,51 @@ window.__ModuleLoader__.load({
               /* the caller reports the failure once the fork settles */
             }
           };
-          const hostChildId = typeof parsed.data.childId === 'string' && parsed.data.childId !== ''
-            ? parsed.data.childId
-            : undefined;
+          const hostChildId = typeof data.childId === 'string' && data.childId !== '' ? data.childId : undefined;
           let childId = hostChildId;
           if (childId === undefined) {
-            if (typeof parsed.data.startSeq !== 'number' || parsed.data.startSeq <= 0) return undefined;
+            if (typeof data.startSeq !== 'number' || data.startSeq <= 0) return undefined;
             try {
               childId = await ctx.sessions.fork({
                 sessionId,
-                atSeq: parsed.data.startSeq - 1,
+                atSeq: data.startSeq - 1,
                 increaseTitle: true,
                 onCreated: (id) => openChild(id),
               });
-            } catch (error) {
-              return { error: messageOf(error) };
+            } catch (failure) {
+              return { error: messageOf(failure) };
             }
           }
           openChild(childId);
-          if (typeof parsed.data.prompt === 'string' && parsed.data.prompt !== '') {
-            await refillDraft(childId, parsed.data.prompt);
+          if (typeof data.prompt === 'string' && data.prompt !== '') {
+            await refillDraft(childId, data.prompt);
           }
           return undefined;
+        };
+
+        /** The per-message menu's action: locate the turn from the message id. */
+        const rewind = async (sessionId, messageId, mode) => {
+          if (typeof messageId !== 'string' || messageId === '') return { error: t('failed') };
+          const outcome = await runHostCommand(sessionId, `/rewind-message ${messageId} ${mode}`);
+          if (outcome.error !== undefined) return { error: outcome.error };
+          if (outcome.data === undefined || outcome.data.fork !== true) return undefined;
+          return openBranch(sessionId, outcome.data);
+        };
+
+        /** The dock's action: a turn number works even when the turn was aborted. */
+        const rewindTurn = async (sessionId, turn, mode) => {
+          if (!Number.isInteger(turn) || turn < 0) return { error: t('failed') };
+          const outcome = await runHostCommand(sessionId, `/rewind-turn ${turn} ${mode}`);
+          if (outcome.error !== undefined) return { error: outcome.error };
+          if (outcome.data === undefined || outcome.data.fork !== true) return undefined;
+          return openBranch(sessionId, outcome.data);
+        };
+
+        /** Every checkpoint of the session, newest first, for the dock list. */
+        const rewindList = async (sessionId) => {
+          const outcome = await runHostCommand(sessionId, '/rewind-list');
+          if (outcome.error !== undefined) throw new Error(outcome.error);
+          return outcome.data !== undefined && Array.isArray(outcome.data.checkpoints) ? outcome.data.checkpoints : [];
         };
 
         ctx.slots.inject('conversation.chat.assistant-actions', () => ctx.slots.register({
@@ -987,6 +1154,20 @@ window.__ModuleLoader__.load({
             rewind: (sessionId, messageId, mode) => rewind(sessionId, messageId, mode),
           }),
         }, RewindAction));
+
+        // An aborted turn has no finalized assistant message, so the per-message
+        // menu cannot reach it; this dock lists the Session's own checkpoints.
+        ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
+          name: 'conversation.input.dock',
+          id: 'rewind-dock',
+          order: 30,
+          locale: NS,
+          inject: () => ({
+            i18n: t,
+            rewindList: (sessionId) => rewindList(sessionId),
+            rewindTurn: (sessionId, turn, mode) => rewindTurn(sessionId, turn, mode),
+          }),
+        }, RewindDock));
 
         // The trash is a first-class page: the sidebar panel list shows an icon
         // and the `main` entry with the same id renders the page.
