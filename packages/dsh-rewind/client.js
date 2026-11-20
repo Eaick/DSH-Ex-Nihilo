@@ -788,7 +788,7 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
 
     const dockStyle = {
-      position: 'fixed', left: 'var(--dsh-windows-sidebar-width, 0px)', top: '50%',
+      position: 'fixed', left: 'var(--dsh-windows-sidebar-width, 240px)', top: '50%',
       transform: 'translateY(-50%)', zIndex: 45, display: 'flex', alignItems: 'flex-start',
     };
     /** The D-shaped handle: flat against the sidebar, rounded on the chat side. */
