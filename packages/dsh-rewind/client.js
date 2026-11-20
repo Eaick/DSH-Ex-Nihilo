@@ -788,22 +788,26 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
 
     const dockStyle = {
-      position: 'fixed', left: 'var(--dsh-windows-sidebar-width, 240px)', top: '50%',
-      transform: 'translateY(-50%)', zIndex: 45, display: 'flex', alignItems: 'flex-start',
+      position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+      width: '100%', flex: 'none', padding: '2px 0 6px',
     };
-    /** The D-shaped handle: flat against the sidebar, rounded on the chat side. */
+    /**
+     * The D-shaped capsule: flat against the column's left edge (the sidebar),
+     * rounded on the chat side, so it reads as a handle attached to the sidebar.
+     */
     const handleStyle = {
-      display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      gap: '2px', width: '22px', height: '72px', padding: '0', border: `1px solid ${BORDER}`,
-      borderLeft: 'none', borderRadius: '0 12px 12px 0', background: LAYER_1, color: LABEL_2,
-      cursor: 'pointer', boxShadow: '0 2px 10px rgba(15, 18, 26, .06)',
+      display: 'inline-flex', alignItems: 'center', gap: '6px', height: '34px',
+      padding: '0 14px 0 12px', border: `1.5px solid ${BORDER}`, borderLeft: 'none',
+      borderRadius: '0 999px 999px 0', background: LAYER_1, color: LABEL_2,
+      font: 'inherit', fontSize: '12px', lineHeight: '18px', fontWeight: '500',
+      cursor: 'pointer', boxShadow: '0 2px 8px rgba(15, 18, 26, .05)',
     };
     const panelStyle = {
-      position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)',
-      width: '390px', maxWidth: 'calc(100vw - 96px)', maxHeight: '62vh', overflowY: 'auto',
+      position: 'absolute', bottom: 'calc(100% + 8px)', left: '0',
+      width: '390px', maxWidth: 'calc(100vw - 96px)', maxHeight: '52vh', overflowY: 'auto',
       display: 'flex', flexDirection: 'column', borderRadius: '12px', padding: '6px',
       border: `1px solid ${BORDER}`,
-      background: 'color-mix(in srgb, var(--dsw-alias-bg-overlay, var(--dsw-alias-bg-layer-1)) 88%, transparent)',
+      background: 'color-mix(in srgb, var(--dsw-alias-bg-overlay, var(--dsw-alias-bg-layer-1)) 92%, transparent)',
       WebkitBackdropFilter: 'blur(18px) saturate(180%)',
       backdropFilter: 'blur(18px) saturate(180%)',
       boxShadow: '0 10px 30px rgba(15, 18, 26, .16), 0 1px 2px rgba(15, 18, 26, .08)',
@@ -820,9 +824,9 @@ window.__ModuleLoader__.load({
      *
      * The per-message menu only exists on a finalized assistant message, so a turn
      * the user stopped had no way back: an interrupted turn often has no final
-     * assistant message at all. This D-shaped handle sits against the left sidebar
-     * and lists the Session's own checkpoints — newest first, aborted turns
-     * labelled — so restore and fork work from a turn number alone.
+     * assistant message at all. This capsule lists the Session's own checkpoints —
+     * newest first, aborted turns labelled — so restore and fork work from a turn
+     * number alone.
      */
     function RewindDock(props) {
       const t = typeof props.i18n === 'function' ? props.i18n : (key) => key;
@@ -926,7 +930,7 @@ window.__ModuleLoader__.load({
             void load();
           },
         }, h('span', { className: 'dsh-rewind-menu-glyph', style: { display: 'inline-flex' } }, ICON),
-        h('span', { style: { fontSize: '10px', lineHeight: '12px', writingMode: 'vertical-rl', letterSpacing: '1px' } }, t('panelTitle'))),
+        h('span', null, t('panelTitle'))),
         open
           ? h('div', { style: panelStyle, role: 'dialog', 'aria-label': t('panelTitle') },
             h('div', { style: panelHeadStyle },
