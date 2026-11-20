@@ -841,6 +841,7 @@ window.__ModuleLoader__.load({
       const [error, setError] = React.useState('');
       const [notice, setNotice] = React.useState('');
       const [busy, setBusy] = React.useState('');
+      const [settled, setSettled] = React.useState(false);
       const rootRef = React.useRef(null);
 
       const load = React.useCallback(async () => {
@@ -851,6 +852,8 @@ window.__ModuleLoader__.load({
           setError('');
         } catch (failure) {
           setError(messageOf(failure));
+        } finally {
+          setSettled(true);
         }
       }, [list, sessionId]);
 
@@ -871,6 +874,10 @@ window.__ModuleLoader__.load({
           document.removeEventListener('keydown', escape);
         };
       }, [open]);
+
+      // A blank conversation has nothing to rewind; the capsule only appears once
+      // this session has at least one recorded checkpoint.
+      if (!settled || checkpoints.length === 0) return null;
 
       const pattern = (key, fallback) => {
         const value = t(key);

@@ -128,8 +128,8 @@ await test('client: the dock renders its checkpoint rows', () => {
     { turn: 5, at: '2026-01-01T00:00:00.000Z', files: 1, open: false, aborted: true, git: false },
     { turn: 3, at: '2026-01-01T00:00:00.000Z', files: 2, open: false, aborted: false, git: false },
   ]
-  // useState order: open, checkpoints, error, notice, busy
-  const api = loadClient([true, checkpoints, '', '', ''])
+  // useState order: open, checkpoints, error, notice, busy, settled
+  const api = loadClient([true, checkpoints, '', '', '', true])
   const registered = []
   const ctx = {
     locale: { register: () => () => {}, bind: () => (key) => key },
@@ -151,6 +151,27 @@ await test('client: the dock renders its checkpoint rows', () => {
   const text = JSON.stringify(tree)
   assert.match(text, /turnFormat|第/, 'the dock must label its turns')
   assert.match(text, /abortedBadge|已中止/, 'the dock must mark an aborted turn')
+})
+
+await test('client: the capsule stays hidden on a session without snapshots', () => {
+  const api = loadClient([false, [], '', '', '', true])
+  const registered = []
+  const ctx = {
+    locale: { register: () => () => {}, bind: () => (key) => key },
+    effect: (fn) => { fn(); return () => {} },
+    get: () => undefined,
+    slots: {
+      inject: (names, callback) => callback(ctx),
+      register: (options, component) => { registered.push({ options, component }); return () => {} },
+    },
+    remote: { commands: { execute: async () => ({ ok: true, value: { result: { kind: 'success', text: '' } } }) } },
+    sessions: { binding: () => undefined, fork: async () => 'session-child' },
+    uiWorkspace: { openSession() {} },
+  }
+  api.apply(ctx)
+  const dock = registered.find((entry) => entry.options.name === 'conversation.input.dock')
+  assert.ok(dock !== undefined)
+  assert.equal(dock.component({ sessionId: 'session-x', i18n: (key) => key, rewindList: async () => [], rewindTurn: async () => undefined }), null)
 })
 
 console.log('')
