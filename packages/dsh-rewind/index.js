@@ -1115,7 +1115,6 @@ export function apply(ctx, config) {
   command({
     name: 'rewind-list',
     description: '列出当前会话的逐轮文件快照（供输入框上方的回退面板使用）',
-    input: { hint: '' },
     handler: async (invocation) => {
       try {
         const session = ctx.agents.get(invocation.agent.id)?.session

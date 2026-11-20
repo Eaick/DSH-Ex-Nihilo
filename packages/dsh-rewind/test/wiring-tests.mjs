@@ -371,6 +371,15 @@ await test('rewind-message: code mode never asks for a fork', async () => {
   assert.equal(payload.startSeq, 3)
 })
 
+await test('apply: a declared input hint is never empty', () => {
+  const { wired } = setup()
+  for (const definition of wired.commands) {
+    if (definition.input === undefined) continue
+    assert.equal(typeof definition.input.hint, 'string', `${definition.name} must declare input.hint`)
+    assert.ok(definition.input.hint.length > 0, `${definition.name} must declare a non-empty input.hint`)
+  }
+})
+
 await test('rewind-list: newest first, and an aborted turn is labelled', async () => {
   const target = 'session-list-1'
   const sessionId = target
