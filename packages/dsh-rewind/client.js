@@ -798,7 +798,10 @@ window.__ModuleLoader__.load({
     const handleStyle = {
       display: 'inline-flex', alignItems: 'center', gap: '6px', height: '34px',
       padding: '0 14px 0 12px', border: `1.5px solid ${BORDER}`, borderLeft: 'none',
-      borderRadius: '0 999px 999px 0', background: LAYER_1, color: LABEL_2,
+      borderRadius: '0 999px 999px 0',
+      background: 'color-mix(in srgb, var(--dsw-alias-bg-overlay, var(--dsw-alias-bg-layer-1)) 70%, transparent)',
+      WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+      backdropFilter: 'blur(12px) saturate(180%)', color: LABEL_2,
       font: 'inherit', fontSize: '12px', lineHeight: '18px', fontWeight: '500',
       cursor: 'pointer', boxShadow: '0 2px 8px rgba(15, 18, 26, .05)',
     };
@@ -807,9 +810,9 @@ window.__ModuleLoader__.load({
       width: '390px', maxWidth: 'calc(100vw - 96px)', maxHeight: '52vh', overflowY: 'auto',
       display: 'flex', flexDirection: 'column', borderRadius: '12px', padding: '6px',
       border: `1px solid ${BORDER}`,
-      background: 'color-mix(in srgb, var(--dsw-alias-bg-overlay, var(--dsw-alias-bg-layer-1)) 92%, transparent)',
-      WebkitBackdropFilter: 'blur(18px) saturate(180%)',
-      backdropFilter: 'blur(18px) saturate(180%)',
+      background: 'color-mix(in srgb, var(--dsw-alias-bg-overlay, var(--dsw-alias-bg-layer-1)) 40%, transparent)',
+      WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+      backdropFilter: 'blur(22px) saturate(180%)',
       boxShadow: '0 10px 30px rgba(15, 18, 26, .16), 0 1px 2px rgba(15, 18, 26, .08)',
     };
     const panelHeadStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px 6px', fontSize: '12px', color: LABEL_3 };
