@@ -15,6 +15,8 @@ window.__ModuleLoader__.load({
       turnFormat: '第 {n} 轮',
       filesFormat: '{n} 个文件',
       noticeRewound: '已回退',
+      snapshotsUnit: '条快照',
+      noSnapshots: '还没有文件快照。',
       code: '恢复代码',
       forkCode: '恢复代码并分叉',
       forkHint: '新建会话',
@@ -68,6 +70,8 @@ window.__ModuleLoader__.load({
       turnFormat: 'Turn {n}',
       filesFormat: '{n} files',
       noticeRewound: 'Rewound',
+      snapshotsUnit: 'snapshots',
+      noSnapshots: 'No snapshots yet.',
       code: 'Restore code',
       forkCode: 'Restore code and fork',
       forkHint: 'new chat',
@@ -434,8 +438,8 @@ window.__ModuleLoader__.load({
         margin-left: auto; font-size: 11px; line-height: 16px;
         color: var(--dsw-alias-label-tertiary, var(--dsw-alias-label-secondary));
       }
-      .dsh-rewind-dock-toggle { transition: opacity .12s ease; }
-      .dsh-rewind-dock-toggle:hover { opacity: .7; }
+      .dsh-rewind-handle { transition: background-color .12s ease, color .12s ease; }
+      .dsh-rewind-handle:hover { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); }
       .dsh-rewind-caret { font-size: 11px; line-height: 16px; color: var(--dsw-alias-state-error-primary); }
     `;
 
@@ -784,30 +788,41 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
 
     const dockStyle = {
-      display: 'flex', flexDirection: 'column', width: '100%', marginBottom: '8px',
-      border: `1px solid ${BORDER}`, borderRadius: '10px', background: LAYER_1, overflow: 'hidden',
+      position: 'fixed', left: 'var(--dsh-windows-sidebar-width, 0px)', top: '50%',
+      transform: 'translateY(-50%)', zIndex: 45, display: 'flex', alignItems: 'flex-start',
     };
-    const dockHeadStyle = { display: 'flex', alignItems: 'center', gap: '8px', minHeight: '34px', padding: '0 10px 0 6px' };
-    const dockToggleStyle = {
-      display: 'inline-flex', alignItems: 'center', gap: '6px', height: '34px', padding: '0 4px',
-      border: 'none', background: 'transparent', color: LABEL, font: 'inherit', fontSize: '12px',
-      fontWeight: '500', cursor: 'pointer', whiteSpace: 'nowrap',
+    /** The D-shaped handle: flat against the sidebar, rounded on the chat side. */
+    const handleStyle = {
+      display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: '2px', width: '22px', height: '72px', padding: '0', border: `1px solid ${BORDER}`,
+      borderLeft: 'none', borderRadius: '0 12px 12px 0', background: LAYER_1, color: LABEL_2,
+      cursor: 'pointer', boxShadow: '0 2px 10px rgba(15, 18, 26, .06)',
     };
+    const panelStyle = {
+      position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)',
+      width: '390px', maxWidth: 'calc(100vw - 96px)', maxHeight: '62vh', overflowY: 'auto',
+      display: 'flex', flexDirection: 'column', borderRadius: '12px', padding: '6px',
+      border: `1px solid ${BORDER}`,
+      background: 'color-mix(in srgb, var(--dsw-alias-bg-overlay, var(--dsw-alias-bg-layer-1)) 88%, transparent)',
+      WebkitBackdropFilter: 'blur(18px) saturate(180%)',
+      backdropFilter: 'blur(18px) saturate(180%)',
+      boxShadow: '0 10px 30px rgba(15, 18, 26, .16), 0 1px 2px rgba(15, 18, 26, .08)',
+    };
+    const panelHeadStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px 6px', fontSize: '12px', color: LABEL_3 };
     const dockMetaStyle = {
       fontSize: '12px', lineHeight: '18px', color: LABEL_3,
       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
     };
-    const dockRowStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderTop: `1px solid ${BORDER}` };
-    const dockListStyle = { maxHeight: '220px', overflowY: 'auto' };
+    const dockRowStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '8px' };
 
     /**
      * Session-level rewind entry.
      *
      * The per-message menu only exists on a finalized assistant message, so a turn
      * the user stopped had no way back: an interrupted turn often has no final
-     * assistant message at all. This panel lists the Session's own checkpoints —
-     * newest first, aborted turns labelled — and restores or branches from a turn
-     * number alone.
+     * assistant message at all. This D-shaped handle sits against the left sidebar
+     * and lists the Session's own checkpoints — newest first, aborted turns
+     * labelled — so restore and fork work from a turn number alone.
      */
     function RewindDock(props) {
       const t = typeof props.i18n === 'function' ? props.i18n : (key) => key;
@@ -819,6 +834,7 @@ window.__ModuleLoader__.load({
       const [error, setError] = React.useState('');
       const [notice, setNotice] = React.useState('');
       const [busy, setBusy] = React.useState('');
+      const rootRef = React.useRef(null);
 
       const load = React.useCallback(async () => {
         if (typeof sessionId !== 'string' || sessionId === '') return;
@@ -833,7 +849,21 @@ window.__ModuleLoader__.load({
 
       React.useEffect(() => { void load(); }, [load]);
 
-      if (checkpoints.length === 0 && error === '') return null;
+      React.useEffect(() => {
+        if (!open) return undefined;
+        const close = (event) => {
+          if (rootRef.current !== null && !rootRef.current.contains(event.target)) setOpen(false);
+        };
+        const escape = (event) => {
+          if (event.key === 'Escape') setOpen(false);
+        };
+        document.addEventListener('mousedown', close);
+        document.addEventListener('keydown', escape);
+        return () => {
+          document.removeEventListener('mousedown', close);
+          document.removeEventListener('keydown', escape);
+        };
+      }, [open]);
 
       const pattern = (key, fallback) => {
         const value = t(key);
@@ -841,7 +871,6 @@ window.__ModuleLoader__.load({
       };
       const turnLabel = (turn) => pattern('turnFormat', '{n}').replace('{n}', String(turn));
       const filesLabel = (files) => pattern('filesFormat', '{n}').replace('{n}', String(files));
-      const latest = checkpoints.length === 0 ? undefined : checkpoints[0];
 
       const run = async (turn, mode) => {
         if (busy !== '') return;
@@ -861,55 +890,55 @@ window.__ModuleLoader__.load({
       };
 
       const row = (item) => h('div', { key: item.turn, style: dockRowStyle },
-        h('span', { style: { minWidth: '58px', fontWeight: '500', whiteSpace: 'nowrap' } }, turnLabel(item.turn)),
+        h('span', { style: { minWidth: '56px', fontWeight: '500', whiteSpace: 'nowrap' } }, turnLabel(item.turn)),
         item.aborted === true
           ? h('span', { style: { ...badgeStyle, color: 'var(--dsw-alias-state-warn-primary)' } }, t('abortedBadge'))
           : item.open === true
             ? h('span', { style: { ...badgeStyle, color: 'var(--dsw-alias-state-warn-primary)' } }, t('runningBadge'))
             : null,
-        h('span', { style: { ...dockMetaStyle, flex: '0 1 auto' } },
+        h('span', { style: { ...dockMetaStyle, flex: '1 1 auto', minWidth: '0' } },
           [formatTime(item.at), filesLabel(item.files)].filter((part) => part !== '').join(' · ')),
-        h('span', { style: { flex: '1 1 auto' } }),
         h('button', {
           type: 'button',
           className: 'dsh-rewind-primary-btn',
-          style: primaryButtonStyle,
+          style: { ...primaryButtonStyle, height: '26px', fontSize: '12px', padding: '0 10px' },
           disabled: busy !== '',
           onClick: () => { void run(item.turn, 'code'); },
         }, t('code')),
         h('button', {
           type: 'button',
           className: 'dsh-rewind-trash-btn',
-          style: quietButtonStyle,
+          style: { ...quietButtonStyle, height: '26px', fontSize: '12px', padding: '0 8px' },
           disabled: busy !== '',
           onClick: () => { void run(item.turn, 'fork-code'); },
         }, t('forkCode')));
 
-      const summary = latest === undefined
-        ? ''
-        : `${turnLabel(latest.turn)} · ${filesLabel(latest.files)}${latest.aborted === true ? ` · ${t('abortedBadge')}` : ''}`;
-
-      return h('div', { style: dockStyle },
-        h('div', { style: dockHeadStyle },
-          h('button', {
-            type: 'button',
-            className: 'dsh-rewind-dock-toggle',
-            style: dockToggleStyle,
-            'aria-expanded': open ? 'true' : 'false',
-            title: t('panelTitle'),
-            onClick: () => {
-              setOpen((value) => !value);
-              void load();
-            },
+      return h('div', { ref: rootRef, style: dockStyle },
+        h('button', {
+          type: 'button',
+          className: 'dsh-rewind-handle',
+          style: handleStyle,
+          'aria-expanded': open ? 'true' : 'false',
+          'aria-haspopup': 'dialog',
+          title: t('panelTitle'),
+          onClick: () => {
+            setOpen((value) => !value);
+            void load();
           },
-          h('span', { className: 'dsh-rewind-chevron', 'data-open': open ? 'true' : 'false' }, chevron),
-          h('span', { className: 'dsh-rewind-menu-glyph' }, ICON),
-          h('span', null, t('panelTitle')),
-          summary === '' ? null : h('span', { style: dockMetaStyle }, summary)),
-          h('span', { style: { flex: '1 1 auto' } }),
-          error === '' ? null : h('span', { className: 'dsh-rewind-caret', style: { maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: error }, error),
-          notice === '' ? null : h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-state-success-primary)' } }, notice)),
-        open ? h('div', { className: 'dsh-rewind-trash-scroll', style: dockListStyle }, checkpoints.map(row)) : null);
+        }, h('span', { className: 'dsh-rewind-menu-glyph', style: { display: 'inline-flex' } }, ICON),
+        h('span', { style: { fontSize: '10px', lineHeight: '12px', writingMode: 'vertical-rl', letterSpacing: '1px' } }, t('panelTitle'))),
+        open
+          ? h('div', { style: panelStyle, role: 'dialog', 'aria-label': t('panelTitle') },
+            h('div', { style: panelHeadStyle },
+              h('span', { style: { fontWeight: '500', color: LABEL } }, t('panelTitle')),
+              h('span', null, `${checkpoints.length} ${t('snapshotsUnit')}`),
+              h('span', { style: { flex: '1 1 auto' } }),
+              error === '' ? null : h('span', { className: 'dsh-rewind-caret', title: error }, error),
+              notice === '' ? null : h('span', { style: { color: 'var(--dsw-alias-state-success-primary)' } }, notice)),
+            checkpoints.length === 0
+              ? h('div', { style: { ...dockMetaStyle, padding: '10px 8px' } }, t('noSnapshots'))
+              : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '2px' } }, checkpoints.map(row)))
+          : null);
     }
 
     // ---------------------------------------------------------------------

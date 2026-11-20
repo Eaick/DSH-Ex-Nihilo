@@ -129,7 +129,7 @@ await test('client: the dock renders its checkpoint rows', () => {
     { turn: 3, at: '2026-01-01T00:00:00.000Z', files: 2, open: false, aborted: false, git: false },
   ]
   // useState order: open, checkpoints, error, notice, busy
-  const api = loadClient([false, checkpoints, '', '', ''])
+  const api = loadClient([true, checkpoints, '', '', ''])
   const registered = []
   const ctx = {
     locale: { register: () => () => {}, bind: () => (key) => key },
